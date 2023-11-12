@@ -27,14 +27,11 @@ async def post_stats(context: ContextTypes.DEFAULT_TYPE, chat_data, chat_id: int
         return
 
     puzzle_data = chat_data[puzzle_num]
-    num_players = num_perfect = num_good = 0
+    players_by_guesses = [0] * 5
 
     for user, num_incorrect_guesses in puzzle_data.items():
-        num_players += 1
-        if num_incorrect_guesses == 0:
-            num_perfect += 1
-        elif num_incorrect_guesses < 4:
-            num_good += 1
+        players_by_guesses[num_incorrect_guesses] += 1
+    num_players = sum(players_by_guesses)
 
     await context.bot.send_message(
         chat_id=chat_id,
@@ -42,8 +39,11 @@ async def post_stats(context: ContextTypes.DEFAULT_TYPE, chat_data, chat_id: int
 Connections
 Puzzle \\#{puzzle_num}
 
-💯 Perfect: **{num_perfect}**
-👍 Good: **{num_good}**
+💯 Perfect: **{players_by_guesses[0]}** \\({players_by_guesses[0]/num_players:.0%}\\)
+🟨 1 Guess: **{players_by_guesses[1]}** \\({players_by_guesses[1]/num_players:.0%}\\)
+🟩 2 Guess: **{players_by_guesses[2]}** \\({players_by_guesses[2]/num_players:.0%}\\)
+🟦 3 Guess: **{players_by_guesses[3]}** \\({players_by_guesses[3]/num_players:.0%}\\)
+🟪 4 Guess: **{players_by_guesses[4]}** \\({players_by_guesses[4]/num_players:.0%}\\)
 """,
         parse_mode=telegram.constants.ParseMode.MARKDOWN_V2
     )
