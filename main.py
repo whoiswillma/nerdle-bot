@@ -18,11 +18,15 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 timezone_pt = timezone('US/Pacific')
+connections_zero = datetime.datetime(2023, 6, 11, tzinfo=timezone_pt)
 
 
-async def post_stats(context: ContextTypes.DEFAULT_TYPE, chat_data, chat_id: int):
-    puzzle_num = max(chat_data.keys())
-    if not chat_data[puzzle_num]:
+def puzzle_number_now() -> int:
+    return (datetime.datetime.now(tz=timezone_pt) - connections_zero).days
+
+
+async def post_stats(context: ContextTypes.DEFAULT_TYPE, puzzle_num: int, chat_data, chat_id: int):
+    if puzzle_num not in chat_data or not chat_data[puzzle_num]:
         logger.warning(f"No chat data for puzzle #{puzzle_num}, chat id {chat_id}")
         return
 
@@ -50,7 +54,13 @@ Puzzle \\#{puzzle_num}
 
 
 async def _post_stats_job(context: ContextTypes.DEFAULT_TYPE):
-    await post_stats(context, chat_data=context.job.data, chat_id=context.job.chat_id)
+    job_data = context.job.data
+    await post_stats(
+        context,
+        puzzle_num=job_data['puzzle_num'],
+        chat_data=job_data['chat_data'],
+        chat_id=context.job.chat_id
+    )
 
 
 async def parse_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -84,7 +94,10 @@ async def parse_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.job_queue.run_once(
         _post_stats_job,
         when=dt,
-        data=context.chat_data,
+        data={
+            'chat_data': context.chat_data,
+            'puzzle_num': puzzle_number_now(),
+        },
         name=post_stats_job_name,
         chat_id=update.effective_chat.id
     )
@@ -97,7 +110,12 @@ async def command_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.warning(f"No chat data for chat id {chat_id}")
         return
 
-    await post_stats(context, chat_data=context.chat_data, chat_id=chat_id)
+    await post_stats(
+        context,
+        puzzle_num=puzzle_number_now(),
+        chat_data=context.chat_data,
+        chat_id=chat_id
+    )
 
 
 def main():
