@@ -1,5 +1,6 @@
 import re
-from typing import Optional
+from enum import Enum, auto
+from typing import Optional, List
 
 connections_re = re.compile(
     r"""
@@ -18,19 +19,48 @@ Puzzle\s\#([0-9]+)\s*
 )
 
 
+class SpecialOrder(Enum):
+    NATURAL_ORDER = auto()
+    REVERSE_ORDER = auto()
+
+
 class ConnectionsResult:
     puzzle_num: int
-    num_guesses_incorrect: int
+    guesses: List[str]
 
-    def __init__(self, puzzle_num: int, num_guesses_incorrect: int):
+    def __init__(self, puzzle_num: int, guesses: List[str]):
         self.puzzle_num = puzzle_num
-        self.num_guesses_incorrect = num_guesses_incorrect
+        self.guesses = guesses
+
+        for guess in guesses:
+            assert len(guess) == 4
+            assert all(c in '🟨🟩🟦🟪' for c in guess)
 
     def __str__(self):
         return str({
             'puzzle_num': self.puzzle_num,
-            'num_guesses_incorrect': self.num_guesses_incorrect
+            'guesses': self.guesses
         })
+
+    @property
+    def num_guesses_correct(self) -> int:
+        return sum(
+            all(guess[i] == guess[0] for i in range(1, 4))
+            for guess in self.guesses
+        )
+
+    @property
+    def num_guesses_incorrect(self) -> int:
+        return len(self.guesses) - self.num_guesses_correct
+
+    @property
+    def special_order(self) -> Optional[SpecialOrder]:
+        if self.guesses == ['🟨🟨🟨🟨', '🟩🟩🟩🟩', '🟦🟦🟦🟦', '🟪🟪🟪🟪']:
+            return SpecialOrder.NATURAL_ORDER
+        elif self.guesses == ['🟪🟪🟪🟪', '🟦🟦🟦🟦', '🟩🟩🟩🟩', '🟨🟨🟨🟨']:
+            return SpecialOrder.REVERSE_ORDER
+        else:
+            return None
 
 
 def parse_connections_results(text: str) -> Optional[ConnectionsResult]:
@@ -41,16 +71,10 @@ def parse_connections_results(text: str) -> Optional[ConnectionsResult]:
     puzzle_num, *guesses, comment = match.groups()
 
     guesses = list(filter(lambda guess: guess is not None, guesses))
-    num_guesses_correct = sum(
-        1 for guess in guesses
-        if guess is not None
-        and all(guess[i] == guess[0] for i in range(1, 4))
-    )
-    num_guesses_incorrect = len(guesses) - num_guesses_correct
 
     return ConnectionsResult(
         puzzle_num=int(puzzle_num),
-        num_guesses_incorrect=num_guesses_incorrect
+        guesses=guesses
     )
 
 
