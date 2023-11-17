@@ -1,4 +1,6 @@
 .idea
 .env
 data.pickle
+venv*
+__pycache__
 
