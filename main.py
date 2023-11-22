@@ -105,7 +105,14 @@ async def schedule_post_stats_job(context: ContextTypes.DEFAULT_TYPE, chat_id: i
     )
 
 
-async def parse_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_easter_egg_salute(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    positions = {'lieutenant', 'captain', 'major', 'colonel', 'kernel', 'general'}
+    message = update.message.text.lower()
+    if any(position in message for position in positions):
+        await update.message.reply_text("🫡")
+
+
+async def handle_connections_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = parse_connections_results(update.message.text)
     if not result:
         return None
@@ -125,6 +132,11 @@ async def parse_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await v1.handlers.handle_result(update, context, result)
 
     await schedule_post_stats_job(context, update.effective_chat.id)
+
+
+async def parse_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await handle_connections_results(update, context)
+    await handle_easter_egg_salute(update, context)
 
 
 async def command_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
